@@ -4,7 +4,8 @@ const Influencer = require("../models/Influencer");
 const calculateCommission = require("../utils/calculateCommission");
 
 exports.handleDeliveryUpdate = async (req, res) => {
-  const session = await mongoose.startSession();
+  console.log("Fullfilled Order: ", req.body);
+  /*const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
@@ -94,5 +95,5 @@ exports.handleDeliveryUpdate = async (req, res) => {
       message: "Internal server error",
       error: error.message
     });
-  }
+  }*/
 };
