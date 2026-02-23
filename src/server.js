@@ -1,6 +1,9 @@
 require("dotenv").config();
 const app = require("./app");
 const connectDB = require("./config/db");
+const { startShopifySyncJob } = require("./cron/shopifySync.cron");
+
+startShopifySyncJob();
 
 connectDB();
 

@@ -22,6 +22,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^7.1.0",
     "mongoose": "^9.1.5",
+    "node-cron": "^4.2.1",
     "nodemon": "^3.1.14",
     "require": "^2.4.20",
     "resend": "^6.9.1"

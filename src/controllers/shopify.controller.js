@@ -120,3 +120,83 @@ exports.handleOrdered = async (req, res) => {
   }
 };
 
+exports.handleOrderPaidUpdate = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { shopifyOrderId } = req.body;
+
+    if (!shopifyOrderId) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: "shopifyOrderId is required" });
+    }
+
+    // 1️⃣ Find the order
+    const order = await Order.findOne(
+      { shopifyOrderId },
+      null,
+      { session }
+    );
+
+    if (!order) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // 2️⃣ Idempotency check
+    if (order.status === "paid") {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(200).json({
+        message: "Order already marked as paid"
+      });
+    }
+
+    // 3️⃣ Update order status
+    order.status = "paid";
+    await order.save({ session });
+
+    // 4️⃣ If promo code exists → update influencer
+    if (order.promoCode) {
+      const influencer = await Influencer.findOne(
+        { promoCode: order.promoCode }
+      ).session(session);
+
+      if (influencer) {
+        influencer.totalOrders += 1;
+        influencer.totalRevenue += order.totalPrice;
+        influencer.deliveredRevenue += order.totalPrice;
+
+        // Commission calculation
+        const commission =
+          (order.totalPrice * influencer.allotedDiscount) / 100;
+
+        influencer.commissionEarned += commission;
+
+        await influencer.save({ session });
+      }
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      success: true,
+      message: "Order marked as paid and influencer updated"
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("Payment Update Failed:", error);
+
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
