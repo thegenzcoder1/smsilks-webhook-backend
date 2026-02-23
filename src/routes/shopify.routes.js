@@ -2,6 +2,6 @@ const express = require("express");
 const router = express.Router();
 const { handleOrderPaid } = require("../controllers/shopify.controller");
 
-router.post("/order-paid", handleOrderPaid);
+router.post("/ordered", handleOrderPaid);
 
 module.exports = router;

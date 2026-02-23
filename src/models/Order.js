@@ -6,9 +6,9 @@ const orderSchema = new mongoose.Schema({
   email: String,
   phone: String,
   totalPrice: Number,
-  financialStatus: String,
   fulfillmentStatus: String,
-  affiliateCode: String,
+  promoCode: String,
+  shipmentStatus: String,
   lineItems: [
     {
       productId: String,
