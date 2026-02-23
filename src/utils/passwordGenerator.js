@@ -1,8 +1,19 @@
-exports.generatePassword = () => {
+const bcrypt = require("bcrypt");
+
+const SALT_ROUNDS = 10;
+
+exports.generateHashedPassword = async () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  let pass = "";
+  let plainPassword = "";
+
   for (let i = 0; i < 4; i++) {
-    pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    plainPassword += chars.charAt(
+      Math.floor(Math.random() * chars.length)
+    );
   }
-  return pass;
+
+  // bcrypt automatically generates salt internally
+  const hashedPassword = await bcrypt.hash(plainPassword, SALT_ROUNDS);
+
+  return hashedPassword;
 };
