@@ -1,7 +1,4 @@
-const Order = require("../models/Order");
-const { fetchPaidUnfulfilledOrders } = require("../services/shopifyGraphql.service");
-
-exports.syncPaidUnfulfilledOrders = async () => {
+exports.syncPaidOrders = async () => {
   try {
     console.log("🔄 Starting Shopify Full Sync Job...");
 
@@ -9,11 +6,18 @@ exports.syncPaidUnfulfilledOrders = async () => {
     let cursor = null;
 
     while (hasNextPage) {
-      const data = await fetchPaidUnfulfilledOrders(cursor);
+      const data = await fetchPaidOrders(cursor); 
+      // 🔥 IMPORTANT: remove fulfillment filter in service
 
       for (const edge of data.edges) {
         const order = edge.node;
         const shopifyOrderId = order.id.split("/").pop();
+
+        const fulfillmentStatusRaw =
+          order.displayFulfillmentStatus || "";
+
+        const normalizedFulfillment =
+          fulfillmentStatusRaw.toUpperCase();
 
         const mappedOrder = {
           shopifyOrderId,
@@ -23,15 +27,16 @@ exports.syncPaidUnfulfilledOrders = async () => {
           totalPrice: parseFloat(
             order.totalPriceSet.shopMoney.amount
           ),
-          fulfillmentStatus: order.displayFulfillmentStatus,
+          fulfillmentStatus: fulfillmentStatusRaw,
           promoCode:
             order.discountApplications.edges[0]?.node?.code || null,
           shipmentStatus:
-            order.displayFulfillmentStatus === "FULFILLED"
-              ? "delivered"
-              : "not delivered",
+            normalizedFulfillment === "FULFILLED"
+              ? "FULFILLED"
+              : "NOT FULFILLED",
           lineItems: order.lineItems.edges.map(item => ({
-            productId: item.node.product?.id?.split("/").pop() || null,
+            productId:
+              item.node.product?.id?.split("/").pop() || null,
             title: item.node.title,
             quantity: item.node.quantity,
             price: parseFloat(
@@ -43,14 +48,10 @@ exports.syncPaidUnfulfilledOrders = async () => {
 
         const existingOrder = await Order.findOne({ shopifyOrderId });
 
-        // 🆕 CREATE
         if (!existingOrder) {
           await Order.create(mappedOrder);
           console.log(`🆕 Created Order: ${shopifyOrderId}`);
-        }
-
-        // 🔄 UPDATE
-        else {
+        } else {
           let needsUpdate = false;
 
           if (
@@ -65,7 +66,8 @@ exports.syncPaidUnfulfilledOrders = async () => {
           }
 
           if (existingOrder.totalPrice !== mappedOrder.totalPrice) {
-            existingOrder.totalPrice = mappedOrder.totalPrice;
+            existingOrder.totalPrice =
+              mappedOrder.totalPrice;
             needsUpdate = true;
           }
 
