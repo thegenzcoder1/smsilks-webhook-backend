@@ -6,6 +6,7 @@ const InfluencerCredential = require("../models/InfluencerCredential");
 
 const { fetchPromoDetails } = require("../utils/promoService");
 const { generateHashedPassword } = require("../utils/passwordGenerator");
+const { calculateCommission } = require("../utils/commissionCalculator");
 
 exports.handleOrdered = async (req, res) => {
   const session = await mongoose.startSession();
@@ -68,7 +69,7 @@ exports.handleOrdered = async (req, res) => {
             { session },
           );
 
-          const { hashedPassword } = await generateHashedPassword();
+          const hashedPassword = await generateHashedPassword();
 
           await InfluencerCredential.create(
             [
@@ -118,3 +119,4 @@ exports.handleOrdered = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+

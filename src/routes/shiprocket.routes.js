@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { handleDeliveryUpdate } = require("../controllers/shiprocket.controller");
+const { handleOrderStatus } = require("../controllers/shiprocket.controller");
 
-router.post("/orderstatus", handleDeliveryUpdate);
+router.post("/orderstatus", handleOrderStatus);
 
 module.exports = router;
