@@ -3,7 +3,7 @@ const { fetchPaidUnfulfilledOrders } = require("../services/shopifyGraphql.servi
 
 exports.syncPaidUnfulfilledOrders = async () => {
   try {
-    console.log("🔄 Starting Shopify Sync Job...");
+    console.log("🔄 Starting Shopify Full Sync Job...");
 
     let hasNextPage = true;
     let cursor = null;
@@ -13,7 +13,6 @@ exports.syncPaidUnfulfilledOrders = async () => {
 
       for (const edge of data.edges) {
         const order = edge.node;
-
         const shopifyOrderId = order.id.split("/").pop();
 
         const mappedOrder = {
@@ -27,7 +26,10 @@ exports.syncPaidUnfulfilledOrders = async () => {
           fulfillmentStatus: order.displayFulfillmentStatus,
           promoCode:
             order.discountApplications.edges[0]?.node?.code || null,
-          shipmentStatus: "not delivered",
+          shipmentStatus:
+            order.displayFulfillmentStatus === "FULFILLED"
+              ? "delivered"
+              : "not delivered",
           lineItems: order.lineItems.edges.map(item => ({
             productId: item.node.product?.id?.split("/").pop() || null,
             title: item.node.title,
@@ -39,18 +41,51 @@ exports.syncPaidUnfulfilledOrders = async () => {
           status: "paid"
         };
 
-        await Order.findOneAndUpdate(
-          { shopifyOrderId },
-          mappedOrder,
-          { upsert: true, new: true }
-        );
+        const existingOrder = await Order.findOne({ shopifyOrderId });
+
+        // 🆕 CREATE
+        if (!existingOrder) {
+          await Order.create(mappedOrder);
+          console.log(`🆕 Created Order: ${shopifyOrderId}`);
+        }
+
+        // 🔄 UPDATE
+        else {
+          let needsUpdate = false;
+
+          if (
+            existingOrder.fulfillmentStatus !==
+            mappedOrder.fulfillmentStatus
+          ) {
+            existingOrder.fulfillmentStatus =
+              mappedOrder.fulfillmentStatus;
+            existingOrder.shipmentStatus =
+              mappedOrder.shipmentStatus;
+            needsUpdate = true;
+          }
+
+          if (existingOrder.totalPrice !== mappedOrder.totalPrice) {
+            existingOrder.totalPrice = mappedOrder.totalPrice;
+            needsUpdate = true;
+          }
+
+          if (existingOrder.status !== "paid") {
+            existingOrder.status = "paid";
+            needsUpdate = true;
+          }
+
+          if (needsUpdate) {
+            await existingOrder.save();
+            console.log(`🔄 Updated Order: ${shopifyOrderId}`);
+          }
+        }
       }
 
       hasNextPage = data.pageInfo.hasNextPage;
       cursor = data.pageInfo.endCursor;
     }
 
-    console.log("✅ Shopify Sync Completed");
+    console.log("✅ Shopify Full Sync Completed");
 
   } catch (error) {
     console.error("❌ Shopify Sync Failed:", error.message);
