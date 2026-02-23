@@ -8,7 +8,7 @@ exports.fetchPaidUnfulfilledOrders = async (cursor = null) => {
     orders(
       first: 250,
       after: $cursor,
-      query: "financial_status:paid AND fulfillment_status:unfulfilled"
+      query: "financial_status:paid"
     ) {
       edges {
         node {
