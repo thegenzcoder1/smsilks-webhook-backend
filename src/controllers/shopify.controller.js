@@ -6,7 +6,7 @@ const InfluencerCredential = require("../models/InfluencerCredential");
 const { fetchPromoDetails } = require("../utils/promoService");
 const { generatePassword } = require("../utils/passwordGenerator");
 
-exports.handleOrderPaid = async (req, res) => {
+exports.handleOrdered = async (req, res) => {
   try {
     const data = req.body;
 
@@ -58,6 +58,7 @@ exports.handleOrderPaid = async (req, res) => {
       phone: data.phone,
       totalPrice: parseFloat(data.total_price),
       fulfillmentStatus: data.fulfillment_status,
+      shipmentStatus: "not delivered",
       promoCode,
       lineItems: data.line_items,
       status: "pending"
